@@ -1,12 +1,15 @@
 # ACT0504 – Análisis Estadístico del Dataset Heart Disease (UCI)  
 # ACT0504 – Statistical Analysis of the Heart Disease Dataset (UCI)
 
-**Autor principal / Main author:** Jose Daniel Alfaro  
-**Colaboradores / Collaborators:** *(to be added)*  
+**Autores / Authors:**  
+- Jose Daniel Alfaro  
+- *(Nombre del compañero 1)*  
+- *(Nombre del compañero 2)*  
+- *(Nombre del compañero 3)*  
+
 **Programa / Program:** Máster en Big Data & Business Intelligence – NEXT Educación  
 **Asignatura / Course:** Fundamentos de Análisis y Preprocesamiento de Datos  
 **Año académico / Academic year:** 2025  
-
 ---
 
 ## 1. Aviso importante sobre el uso de este repositorio  
