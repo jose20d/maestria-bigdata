@@ -1,0 +1,25 @@
+{
+    "columns": {
+      "age": {
+        "min": 10,
+        "max": 80,
+        "strategy": "drop"
+      },
+      "trestbps": {
+        "min": 70,
+        "max": 180,
+        "strategy": "impute_median"
+      },
+      "chol": {
+        "min": null,
+        "max": 500,
+        "strategy": "set_na"
+      },
+      "thalach": {
+        "min": 60,
+        "max": 220,
+        "strategy": "drop"
+      }
+    }
+  }
+  

@@ -1,89 +1,94 @@
-# ACT0504 – Análisis Estadístico del Dataset Heart Disease (UCI)  
+# ACT0504 – Análisis Estadístico del Dataset Heart Disease (UCI)
 # ACT0504 – Statistical Analysis of the Heart Disease Dataset (UCI)
 
-**Autores / Authors:**  
-- Jose Daniel Alfaro  
-- *(Nombre del compañero 1)*  
-- *(Nombre del compañero 2)*  
-- *(Nombre del compañero 3)*  
+Autores / Authors:
+- Jose Daniel Alfaro
+- (Nombre del compañero 1)
+- (Nombre del compañero 2)
+- (Nombre del compañero 3)
 
-**Programa / Program:** Máster en Big Data & Business Intelligence – NEXT Educación  
-**Asignatura / Course:** Fundamentos de Análisis y Preprocesamiento de Datos  
-**Año académico / Academic year:** 2025  
+Programa / Program: Máster en Big Data & Business Intelligence – NEXT Educación  
+Asignatura / Course: Fundamentos de Análisis y Preprocesamiento de Datos  
+Año académico / Academic Year: 2025
+
 ---
 
 ## 1. Aviso importante sobre el uso de este repositorio  
-## 1. Important Notice Regarding the Use of this Repository
+## 1. Important Notice Regarding the Use of This Repository
 
-Este repositorio es público únicamente para permitir su revisión académica por parte del profesorado y de la institución.  
-No constituye un proyecto de código abierto ni un recurso reutilizable para terceros.
+Este repositorio es público exclusivamente para fines de revisión académica.  
+This repository is public solely for academic review purposes.
 
-This repository is public solely to allow academic review by the instructor and the institution.  
-It is not an open-source project, nor a reusable resource for third parties.
+No constituye un proyecto de código abierto ni un recurso reutilizable por terceros.  
+It is not an open‑source project nor a reusable resource.
 
-**Queda estrictamente prohibido / Strictly prohibited:**
+### Prohibido / Strictly prohibited:
+- Copiar o reutilizar código o análisis.
+- Presentar este material como propio en cualquier institución.
+- Clonar o derivar proyectos basados en este repositorio.
 
-- Copiar, reproducir o reutilizar total o parcialmente el código, análisis o contenido aquí publicado para trabajos académicos propios o ajenos.  
-- Presentar este material en cualquier institución educativa como si fuera de autoría propia.  
-- Redistribuir, clonar o derivar proyectos basados en este repositorio sin autorización expresa.
-
-Copying, reproducing, or reusing any portion of the code, analyses, or content for personal or third-party academic work is strictly forbidden.  
-Submitting this material to any educational institution as original work is prohibited.  
-Redistributing, cloning, or deriving projects from this repository without explicit permission is not allowed.
-
-**Se permite / Allowed:**
-
-- La revisión académica por parte del profesor y la universidad.  
-- La referencia conceptual sin copiar contenido literal.
-
-- Academic review by the instructor and institution.  
-- Conceptual referencing without literal reproduction of code or text.
+### Permitido / Allowed:
+- Revisión académica.
+- Referencias conceptuales sin copiar contenido literal.
 
 ---
 
 ## 2. Descripción general del proyecto  
 ## 2. Project Overview
 
-Este proyecto implementa un análisis estadístico completo del dataset *Heart Disease (Cleveland, UCI)*.  
-Incluye procesos de limpieza, preprocesamiento, estadística descriptiva, visualización y pruebas de hipótesis, siguiendo los requerimientos de la asignatura.
+Este proyecto implementa un pipeline modular, reproducible y automatizado para analizar el dataset *Heart Disease (Cleveland, UCI)*.  
+This project implements a modular, reproducible, and automated pipeline to analyze the *Heart Disease (Cleveland, UCI)* dataset.
 
-This project implements a complete statistical analysis of the *Heart Disease (Cleveland, UCI)* dataset.  
-It includes data cleaning, preprocessing, descriptive statistics, visualization, and hypothesis testing according to course requirements.
-
-**Componentes principales / Main components:**
-
-- Descarga y carga automatizada del dataset  
-- Limpieza de datos (imputación, tratamiento de tipos, duplicados, outliers)  
-- Estadística descriptiva y tablas de frecuencias  
-- Visualizaciones (histogramas, boxplots, correlaciones)  
-- Pruebas de hipótesis (Chi-cuadrado, t-test)  
-- Pipeline modular implementado en Python
-
-- Automated dataset acquisition and loading  
-- Data cleaning (imputation, type handling, duplicates, outliers)  
-- Descriptive statistics and frequency tables  
-- Visualizations (histograms, boxplots, correlation heatmaps)  
-- Hypothesis testing (Chi-square, t-test)  
-- Modular processing pipeline implemented in Python
+Incluye / It includes:
+- Descarga automática desde Kaggle / Automatic download from Kaggle  
+- Limpieza configurable mediante JSON / Configurable cleaning rules via JSON  
+- Conversión de tipos / Type conversion  
+- Feature engineering  
+- Estadística descriptiva / Descriptive statistics  
+- Visualizaciones / Visualizations  
+- Pruebas estadísticas / Statistical tests  
 
 ---
 
-## 3. Estructura del proyecto  
-## 3. Project Structure
+## 3. Pipeline del proyecto  
+## 3. Project Pipeline
 
-ACT0504_HeartDisease/
-│
-├── data/ # Dataset (descargado automáticamente / automatically downloaded)
-├── output/plots/ # Imágenes generadas / generated plots
-├── src/
-│ ├── config.py # Configuración de rutas / path configuration
-│ ├── data_loading.py # Descarga y carga / dataset loading
-│ ├── cleaning.py # Procesos de limpieza / cleaning pipeline
-│ ├── eda.py # Estadística descriptiva / descriptive statistics
-│ ├── plotting.py # Visualización / visualization
-│ ├── stats_tests.py # Pruebas de hipótesis / hypothesis tests
-│ └── utils.py # Utilidades / utilities
-│
-├── main.py # Ejecución principal / main execution script
-├── requirements.txt # Dependencias / dependencies
-└── README.md # Este documento / this document
+1. Carga del dataset / Data loading  
+2. Limpieza configurable / Configurable cleaning  
+3. Feature engineering  
+4. Exportación del dataset limpio / Export of cleaned dataset  
+5. Estadística descriptiva y pruebas / EDA & statistical tests  
+
+---
+
+## 4. Estructura del proyecto  
+## 4. Project Structure
+
+ACT0504_HeartDisease/  
+├── data/  
+│   ├── raw/  
+│   └── processed/  
+├── output/  
+│   ├── plots/  
+│   └── reports/  
+├── src/  
+│   ├── config.py  
+│   ├── data_loading.py  
+│   ├── cleaning.py  
+│   ├── eda.py  
+│   ├── plotting.py  
+│   ├── stats_tests.py  
+│   └── utils.py  
+├── cleaning_config.json  
+├── main.py  
+├── requirements.txt  
+└── README.md  
+
+---
+
+## 5. Ejecución del proyecto  
+## 5. Running the Project
+
+```
+python main.py
+```
