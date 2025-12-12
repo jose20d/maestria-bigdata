@@ -1,25 +1,144 @@
 {
-    "columns": {
-      "age": {
-        "min": 10,
-        "max": 80,
-        "strategy": "drop"
+  "general": {
+    "drop_duplicates": true,
+    "convert_dtypes": true
+  },
+
+  "columns": {
+    "age": {
+      "min": 0,
+      "max": 120,
+      "strategy": "drop",
+      "reason": "Edad fuera del rango fisiológicamente posible."
+    },
+
+    "sex": {
+      "allowed_values": [0, 1],
+      "strategy": "drop",
+      "reason": "Valores fuera del dominio definido por UCI."
+    },
+
+    "cp": {
+      "allowed_values": [0, 1, 2, 3],
+      "strategy": "drop",
+      "reason": "Categorías válidas del tipo de dolor de pecho."
+    },
+
+    "trestbps": {
+      "min": 70,
+      "max": 180,
+      "strategy": "drop",
+      "reason": "Valores por debajo de 70 o superiores a 180 se consideran no fiables en este estudio."
+    },
+
+    "chol": {
+      "min": 100,
+      "max": 600,
+      "strategy": "drop",
+      "reason": "Colesterol total fuera de rangos clínicos razonables."
+    },
+
+    "fbs": {
+      "allowed_values": [0, 1],
+      "strategy": "drop",
+      "reason": "Variable binaria."
+    },
+
+    "restecg": {
+      "allowed_values": [0, 1, 2],
+      "strategy": "drop",
+      "reason": "Rangos definidos por UCI Cleveland."
+    },
+
+    "thalach": {
+      "min": 60,
+      "max": 250,
+      "strategy": "drop",
+      "reason": "Frecuencia cardiaca máxima incompatible con valores fisiológicos típicos."
+    },
+
+    "exang": {
+      "allowed_values": [0, 1],
+      "strategy": "drop",
+      "reason": "Variable binaria."
+    },
+
+    "oldpeak": {
+      "min": 0.0,
+      "max": 6.5,
+      "strategy": "drop",
+      "reason": "Elevación/depresión del ST fuera de rango típico en pruebas de esfuerzo."
+    },
+
+    "slope": {
+      "allowed_values": [0, 1, 2],
+      "strategy": "drop",
+      "reason": "Valores categóricos esperados por UCI."
+    },
+
+    "ca": {
+      "min": 0,
+      "max": 4,
+      "strategy": "set_na",
+      "reason": "Cantidad de vasos puede contener valores NA en el dataset original."
+    },
+
+    "thal": {
+      "allowed_values": [0, 1, 2, 3],
+      "strategy": "drop",
+      "reason": "Codificación original del test de thalium."
+    },
+
+    "target": {
+      "allowed_values": [0, 1],
+      "strategy": "drop",
+      "rename_to": "condition",
+      "reason": "Variable objetivo del estudio."
+    }
+  },
+
+  "special_rules": [
+    {
+      "rule_name": "cholesterol_extreme_case",
+      "condition": {
+        "chol": 564,
+        "condition": 0
       },
-      "trestbps": {
-        "min": 70,
-        "max": 180,
-        "strategy": "impute_median"
+      "action": "drop",
+      "reason": "Caso clínicamente imposible reportado en el documento del equipo."
+    },
+    {
+      "rule_name": "oldpeak_extreme_case",
+      "condition_or": [
+        { "oldpeak": 3.5, "condition": 0 },
+        { "oldpeak": 4.2, "condition": 0 }
+      ],
+      "action": "drop",
+      "reason": "Valores extremos de oldpeak en pacientes sanos."
+    },
+    {
+      "rule_name": "incompatible_combination",
+      "condition_and": {
+        "thal": 2,
+        "restecg": 2,
+        "cp_not": 3,
+        "condition": 0
       },
-      "chol": {
-        "min": null,
-        "max": 500,
-        "strategy": "set_na"
-      },
-      "thalach": {
-        "min": 60,
-        "max": 220,
-        "strategy": "drop"
-      }
+      "action": "drop",
+      "reason": "Combinación clínicamente incoherente según el análisis del grupo."
+    }
+  ],
+
+  "normalization": {
+    "apply": false,
+    "method": "zscore",
+    "columns": ["age", "trestbps", "chol", "thalach", "oldpeak"]
+  },
+
+  "feature_engineering": {
+    "age_group": {
+      "bins": [0, 40, 55, 70, 120],
+      "labels": ["joven", "mediana_edad", "mayor", "anciano"]
     }
   }
-  
+}
