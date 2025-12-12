@@ -3,9 +3,10 @@
 
 Autores / Authors:
 - Jose Daniel Alfaro
-- (Nombre del compañero 1)
-- (Nombre del compañero 2)
-- (Nombre del compañero 3)
+- Alejandro Abarca Méndez
+- Dafnee Yesenia Alcantara Villalobos
+- Juan Luis Chávez Mejía
+- Marilyn Melissa Cerdas Brenes
 
 Programa / Program: Máster en Big Data & Business Intelligence – NEXT Educación  
 Asignatura / Course: Fundamentos de Análisis y Preprocesamiento de Datos  
