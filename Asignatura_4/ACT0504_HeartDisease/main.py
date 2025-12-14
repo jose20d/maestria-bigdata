@@ -3,23 +3,37 @@ from __future__ import annotations
 
 from src.data_loading import get_raw_data
 from src.cleaning import clean_data, save_clean_data
+from src.eda_univariate import run_univariate_eda
+from src.eda_bivariate import run_bivariate_eda
 
 
 def main() -> None:
+    # 1. Cargar datos crudos
     df_raw = get_raw_data()
     print("Shape del dataset crudo:", df_raw.shape)
 
+    # 2. Limpiar datos
     df_clean = clean_data(df_raw)
     print("Shape del dataset limpio:", df_clean.shape)
 
+    # 3. Guardar dataset limpio
     save_clean_data(df_clean)
 
-    print("\nPrimeras filas del dataset limpio:")
-    print(df_clean.head())
+    # 4. EDA univariante
+    print("\nEjecutando análisis univariante...")
+    uni_outputs = run_univariate_eda(df_clean)
 
-    print("\nInformación del dataset limpio:")
-    print(df_clean.info())
+    # 5. EDA bivariante
+    print("\nEjecutando análisis bivariante...")
+    bi_outputs = run_bivariate_eda(df_clean)
+
+    # 6. Información final
+    print("\nEDA completado correctamente.")
+    print("\nOutputs generados:")
+    for k, v in {**uni_outputs, **bi_outputs}.items():
+        print(f"- {k}: {v}")
 
 
 if __name__ == "__main__":
     main()
+
