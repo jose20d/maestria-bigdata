@@ -19,9 +19,7 @@ import json
 import pandas as pd
 
 from .config import PROCESSED_DATA_DIR, CLEANING_CONFIG_FILE, VERBOSE
-
-PROCESSED_DATA_FILE = PROCESSED_DATA_DIR / "heart_disease_clean.csv"
-
+from src.config import PROCESSED_DATA_FILE
 
 # -----------------------------
 #  Carga de configuración
@@ -133,13 +131,13 @@ def _apply_ranges_and_allowed(df: pd.DataFrame, cfg: Dict[str, Any]) -> pd.DataF
         if strategy == "drop":
             n = mask_invalid.sum()
             if VERBOSE:
-                print(f"[cleaning] {col}: {n} filas eliminadas por valores fuera de rango/domino.")
+                print(f"[cleaning] {col}: {n} filas eliminadas por valores fuera de rango/dominio.")
             df = df.loc[~mask_invalid].copy()
 
         elif strategy == "set_na":
             n = mask_invalid.sum()
             if VERBOSE:
-                print(f"[cleaning] {col}: {n} valores marcados como NA por estar fuera de rango/domino.")
+                print(f"[cleaning] {col}: {n} valores marcados como NA por estar fuera de rango/dominio.")
             df.loc[mask_invalid, col] = pd.NA
 
     return df
