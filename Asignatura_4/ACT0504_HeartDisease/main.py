@@ -10,6 +10,7 @@ from src.validation import require_columns
 from src.run_metadata import write_run_metadata
 from src.config import COLUMN_NAMES
 from src.hypothesis_tests import run_hypothesis_tests
+from src.pdf_report import generate_executive_pdf
 
 def main() -> None:
     alpha = 0.05
