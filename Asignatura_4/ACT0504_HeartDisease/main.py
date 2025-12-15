@@ -6,7 +6,7 @@ from src.cleaning import clean_data, save_clean_data
 from src.eda_univariate import run_univariate_eda
 from src.eda_bivariate import run_bivariate_eda
 from src.stats_tests import run_hypothesis_tests
-
+from src.pdf_report import generate_executive_pdf
 
 def main() -> None:
     # 1. Cargar datos crudos
@@ -38,6 +38,10 @@ def main() -> None:
     for k, v in {**uni_outputs, **bi_outputs, **ht_outputs}.items():
         print(f"- {k}: {v}")
 
+    # 8. Informe ejecutivo (PDF)
+    print("\nGenerando informe ejecutivo (PDF)...")
+    pdf_path = generate_executive_pdf(alpha=0.05)
+    print("Informe generado en:", pdf_path)
 
 if __name__ == "__main__":
     main()
