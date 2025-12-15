@@ -2,22 +2,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-
-from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate
+from reportlab.lib.pagesizes import A4
 
-from .config import OUTPUT_DIR
-from .report_builder import ExecutiveReportInputs, build_executive_report_elements
+from src.report_builder import ExecutiveReportInputs, build_executive_report_elements, default_executive_report_inputs
 
 
-def generate_executive_pdf(alpha: float = 0.05) -> Path:
-    inputs = ExecutiveReportInputs(
-        univariate_numeric_csv=OUTPUT_DIR / "reports" / "univariate_numeric_summary.csv",
-        hypothesis_md=OUTPUT_DIR / "reports" / "hypothesis_tests.md",
-        plots_dir=OUTPUT_DIR / "plots",
-        output_pdf=OUTPUT_DIR / "reports" / "INFORME_EJECUTIVO_ACT0504.pdf",
-        dataset_name="Heart Disease (Cleveland, UCI)",
-    )
+def generate_executive_pdf(alpha: float = 0.05, inputs: ExecutiveReportInputs | None = None) -> Path:
+    if inputs is None:
+        inputs = default_executive_report_inputs()
 
     output_pdf, elements = build_executive_report_elements(inputs=inputs, alpha=alpha)
 
@@ -28,7 +21,6 @@ def generate_executive_pdf(alpha: float = 0.05) -> Path:
         leftMargin=40,
         topMargin=40,
         bottomMargin=40,
-        title="Informe Ejecutivo – Resultados del Análisis",
     )
     doc.build(elements)
     return output_pdf

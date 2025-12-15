@@ -201,9 +201,6 @@ def save_stacked_bar(
     ax.set_ylabel(ylabel)
     ax.tick_params(axis="x", labelrotation=45)
 
-    # Reservar espacio superior extra (evita solapes)
-    fig.subplots_adjust(top=0.80)
-
     # Leyenda: arriba y fuera del área del gráfico
     legend_title = _label(y_cat)
     ax.legend(title=legend_title, loc="upper center", bbox_to_anchor=(0.5, 1.32), ncol=min(3, len(ct_plot.columns)), frameon=True)

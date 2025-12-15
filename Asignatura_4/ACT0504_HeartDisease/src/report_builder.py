@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import json
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, List, Optional, Tuple
 
 import pandas as pd
 from reportlab.lib import colors
@@ -13,371 +14,475 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import (
     Image,
+    KeepTogether,
     PageBreak,
     Paragraph,
     Spacer,
     Table,
     TableStyle,
-    KeepTogether,
 )
 
-from .config import PROJECT_ROOT, OUTPUT_DIR
+from src.config import OUTPUT_DIR
 
-# ---------------------------------------------------------------------
-# Entradas del reporte
-# ---------------------------------------------------------------------
+
+# -----------------------------
+#  Inputs
+# -----------------------------
 @dataclass(frozen=True)
 class ExecutiveReportInputs:
-    # CSVs (salidas) que ya genera el pipeline
+    dataset_name: str
+    generated_at: datetime
+
+    # Tablas/insumos
     univariate_numeric_csv: Path
-    hypothesis_md: Path | None = None
+    chi_square_contingency_csv: Path
+    ttest_or_anova_summary_csv: Path
+    hypothesis_results_json: Path
 
-    # Carpeta de plots generados
-    plots_dir: Path = OUTPUT_DIR / "plots"
+    # Gráficas (carpeta base)
+    plots_dir: Path
 
-    # PDF destino
-    output_pdf: Path = OUTPUT_DIR / "reports" / "INFORME_EJECUTIVO_ACT0504.pdf"
-
-    # Metadata
-    dataset_name: str = "Heart Disease (Cleveland, UCI)"
-
-
-# ---------------------------------------------------------------------
-# Estilos básicos
-# ---------------------------------------------------------------------
-_STYLES = getSampleStyleSheet()
-H1 = ParagraphStyle("H1", parent=_STYLES["Heading1"], fontSize=22, leading=26, spaceAfter=12)
-H2 = ParagraphStyle("H2", parent=_STYLES["Heading2"], fontSize=14, leading=18, spaceAfter=8)
-P  = ParagraphStyle("P", parent=_STYLES["BodyText"], fontSize=11, leading=14, spaceAfter=8)
-CAP = ParagraphStyle("CAP", parent=_STYLES["BodyText"], fontSize=10, leading=12, textColor=colors.grey)
-
-# ---------------------------------------------------------------------
-# Traducción “bonita” para captions (evita Age box, Condition Bar, etc.)
-# ---------------------------------------------------------------------
-CAPTION_ES = {
-    "age": "Edad (años)",
-    "trestbps": "Presión arterial en reposo",
-    "chol": "Colesterol",
-    "thalach": "Frecuencia cardiaca máxima",
-    "oldpeak": "Depresión ST (oldpeak)",
-
-    "sex": "Sexo",
-    "cp": "Tipo de dolor torácico",
-    "fbs": "Glucosa en ayunas (fbs)",
-    "restecg": "ECG en reposo (restecg)",
-    "exang": "Angina por ejercicio (exang)",
-    "slope": "Pendiente ST (slope)",
-    "thal": "Thal",
-    "ca": "Vasos principales (ca)",
-    "condition": "Condición (0=No, 1=Sí)",
-}
-
-PLOT_NAME_ES = {
-    # univariate numeric
-    "age_box": "Diagrama de caja: Edad",
-    "age_hist": "Histograma: Edad",
-    "age_density": "Densidad: Edad",
-
-    "trestbps_box": "Diagrama de caja: Presión",
-    "trestbps_hist": "Histograma: Presión",
-    "trestbps_density": "Densidad: Presión",
-
-    "chol_box": "Diagrama de caja: Colesterol",
-    "chol_hist": "Histograma: Colesterol",
-    "chol_density": "Densidad: Colesterol",
-
-    "thalach_box": "Diagrama de caja: Frecuencia cardiaca máxima",
-    "thalach_hist": "Histograma: Frecuencia cardiaca máxima",
-    "thalach_density": "Densidad: Frecuencia cardiaca máxima",
-
-    "oldpeak_box": "Diagrama de caja: Oldpeak",
-    "oldpeak_hist": "Histograma: Oldpeak",
-    "oldpeak_density": "Densidad: Oldpeak",
-
-    # bivariate
-    "cp_vs_condition_stacked_bar": "Barras apiladas (%): Dolor torácico vs Condición",
-    "sex_vs_condition_stacked_bar": "Barras apiladas (%): Sexo vs Condición",
-    "chol_by_condition_box": "Boxplot: Colesterol por condición",
-    "thalach_by_condition_box": "Boxplot: Thalach por condición",
-    "age_vs_thalach_scatter": "Dispersión: Edad vs Thalach",
-    "trestbps_vs_chol_scatter": "Dispersión: Presión vs Colesterol",
-
-    # categorical bars
-    "condition_bar": "Gráfico de barras: Condición",
-    "sex_bar": "Gráfico de barras: Sexo",
-    "cp_bar": "Gráfico de barras: Dolor torácico",
-    "fbs_bar": "Gráfico de barras: FBS",
-    "restecg_bar": "Gráfico de barras: Restecg",
-    "exang_bar": "Gráfico de barras: Exang",
-    "slope_bar": "Gráfico de barras: Slope",
-    "thal_bar": "Gráfico de barras: Thal",
-    "ca_bar": "Gráfico de barras: Ca",
-}
+    # Salida
+    output_pdf: Path
 
 
-# ---------------------------------------------------------------------
-# Helpers: tablas y grids de imágenes (clave para bajar páginas)
-# ---------------------------------------------------------------------
-def _safe_exists(p: Path) -> bool:
-    return p is not None and Path(p).exists()
+# -----------------------------
+#  Estilos
+# -----------------------------
+def _styles():
+    base = getSampleStyleSheet()
+
+    title = ParagraphStyle(
+        "TitleES",
+        parent=base["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=22,
+        leading=26,
+        spaceAfter=12,
+    )
+    h1 = ParagraphStyle(
+        "H1ES",
+        parent=base["Heading1"],
+        fontName="Helvetica-Bold",
+        fontSize=14,
+        leading=18,
+        spaceBefore=10,
+        spaceAfter=6,
+    )
+    h2 = ParagraphStyle(
+        "H2ES",
+        parent=base["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=12,
+        leading=16,
+        spaceBefore=8,
+        spaceAfter=4,
+    )
+    body = ParagraphStyle(
+        "BodyES",
+        parent=base["BodyText"],
+        fontName="Helvetica",
+        fontSize=10.5,
+        leading=14,
+        spaceAfter=6,
+    )
+    small = ParagraphStyle(
+        "SmallES",
+        parent=base["BodyText"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+        spaceAfter=4,
+    )
+    caption = ParagraphStyle(
+        "CaptionES",
+        parent=base["BodyText"],
+        fontName="Helvetica-Oblique",
+        fontSize=9,
+        leading=11,
+        spaceBefore=4,
+        spaceAfter=10,
+        textColor=colors.HexColor("#333333"),
+    )
+
+    return title, h1, h2, body, small, caption
 
 
-def _wrap(text: str, style: ParagraphStyle) -> Paragraph:
-    return Paragraph(text, style)
-
-
-def _sp(h: float) -> Spacer:
-    return Spacer(1, h)
-
-
-def _read_csv(path: Path) -> pd.DataFrame:
+# -----------------------------
+#  Helpers
+# -----------------------------
+def _safe_read_csv(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        raise FileNotFoundError(f"No se encontró el archivo requerido: {path}")
     return pd.read_csv(path)
 
 
-def _shorten_headers(df: pd.DataFrame) -> pd.DataFrame:
-    # Para evitar que "outliers_iqr_count" reviente el ancho
-    mapping = {
-        "outliers_iqr_count": "outliers_iqr",
-        "skewness": "asimetría",
-    }
-    cols = [mapping.get(c, c) for c in df.columns]
-    df = df.copy()
-    df.columns = cols
-    return df
+def _round_df(df: pd.DataFrame, decimals: int = 3) -> pd.DataFrame:
+    out = df.copy()
+    for col in out.columns:
+        if pd.api.types.is_numeric_dtype(out[col]):
+            out[col] = out[col].round(decimals)
+    return out
 
 
-def _df_to_table(df: pd.DataFrame, max_width: float) -> Table:
-    # Convierte DF en tabla con estilo y ajuste de ancho
+def _available_width(page_width: float, left_margin: float, right_margin: float) -> float:
+    return page_width - left_margin - right_margin
+
+
+def _table_from_df(
+    df: pd.DataFrame,
+    max_width: float,
+    header_bg=colors.HexColor("#D9D9D9"),
+    font_size: int = 8,
+    leading: int = 9,
+) -> Table:
+    """
+    Crea tabla compacta y evita traslapes:
+    - Redondea valores
+    - Fuente pequeña
+    - ColWidths repartidos (con primera columna un poco más ancha)
+    - WordWrap activado
+    """
+    df = _round_df(df, decimals=3)
     data = [list(df.columns)] + df.astype(str).values.tolist()
-    t = Table(data, repeatRows=1)
 
-    t.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-            ]
-        )
-    )
-
-    # Ajuste simple de anchos: reparte el ancho total
     ncols = len(df.columns)
-    col_width = max_width / max(ncols, 1)
-    t._argW = [col_width] * ncols
-    return t
+    if ncols == 0:
+        return Table([["(sin datos)"]])
 
+    # Columna 0 un poco más ancha (suele ser "variable" o "grupo")
+    base_w = max_width / ncols
+    col_widths = [base_w] * ncols
+    if ncols >= 2:
+        col_widths[0] = base_w * 1.2
+        # reajuste para conservar ancho total
+        rest = max_width - col_widths[0]
+        for i in range(1, ncols):
+            col_widths[i] = rest / (ncols - 1)
 
-def _plot_caption_from_filename(fname: str) -> str:
-    stem = Path(fname).stem
-    # "age_box" => busca directo, si no usa fallback
-    if stem in PLOT_NAME_ES:
-        return PLOT_NAME_ES[stem]
-    # fallback: capitaliza el stem
-    return stem.replace("_", " ").strip().capitalize()
-
-
-def _image_cell(img_path: Path, cell_w: float, cell_h: float) -> list:
-    # Imagen + caption debajo (todo en español)
-    img = Image(str(img_path))
-    img._restrictSize(cell_w, cell_h)
-    cap = _wrap(_plot_caption_from_filename(img_path.name), CAP)
-    return [img, _sp(2), cap]
-
-
-def _images_grid(
-    title: str,
-    image_paths: list[Path],
-    ncols: int = 2,
-    cell_h: float = 8.0 * cm,
-) -> KeepTogether:
-    """
-    Crea un bloque compacto: título + tabla de imágenes (ncols) con captions.
-    Evita que título y gráficos se separen en páginas.
-    """
-    # Filtra solo existentes
-    imgs = [p for p in image_paths if _safe_exists(p)]
-    if not imgs:
-        return KeepTogether([_wrap(title, H2), _wrap("No se encontraron gráficos para esta sección.", P)])
-
-    page_w, page_h = A4
-    usable_w = page_w - (40 + 40)  # márgenes (coincide con SimpleDocTemplate)
-    cell_w = usable_w / ncols - 6
-
-    rows: list[list] = []
-    row: list = []
-
-    # arma celdas
-    for p in imgs:
-        row.append(_image_cell(p, cell_w=cell_w, cell_h=cell_h))
-        if len(row) == ncols:
-            rows.append(row)
-            row = []
-    if row:
-        # rellena la fila final
-        while len(row) < ncols:
-            row.append("")
-        rows.append(row)
-
-    grid = Table(rows, colWidths=[usable_w / ncols] * ncols)
-    grid.setStyle(
+    tbl = Table(data, colWidths=col_widths, hAlign="LEFT")
+    tbl.setStyle(
         TableStyle(
             [
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("BACKGROUND", (0, 0), (-1, 0), header_bg),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), font_size),
+                ("LEADING", (0, 0), (-1, -1), leading),
+                ("ALIGN", (0, 0), (-1, 0), "LEFT"),
+                ("ALIGN", (0, 1), (-1, -1), "LEFT"),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#777777")),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("WORDWRAP", (0, 0), (-1, -1), "CJK"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
             ]
         )
     )
+    return tbl
 
-    return KeepTogether([_wrap(title, H2), grid, _sp(10)])
+
+def _pairwise(items: List[Path]) -> Iterable[Tuple[Path, Optional[Path]]]:
+    it = iter(items)
+    for a in it:
+        b = next(it, None)
+        yield a, b
 
 
-# ---------------------------------------------------------------------
-# Construcción del reporte (elementos ReportLab)
-# ---------------------------------------------------------------------
-def build_executive_report_elements(inputs: ExecutiveReportInputs, alpha: float = 0.05):
+def _plot_caption_es(plot_path: Path) -> str:
     """
-    Retorna (output_pdf, elements) para que pdf_report.py lo construya.
+    Convierte nombres de archivo a captions en español (sin mezclar idiomas).
+    Ajustá este mapeo si cambian nombres.
     """
-    out_pdf = inputs.output_pdf
-    out_pdf.parent.mkdir(parents=True, exist_ok=True)
+    stem = plot_path.stem
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    elements: list = []
+    mapping = {
+        "condition_bar": "Distribución de la condición (0=No, 1=Sí)",
+        "cp_vs_condition_stacked_bar": "Dolor torácico (cp) vs condición (barras apiladas %)",
+        "sex_vs_condition_stacked_bar": "Sexo vs condición (barras apiladas %)",
+        "thalach_by_condition_box": "Frecuencia cardiaca máxima (thalach) por condición (boxplot)",
+        "chol_by_condition_box": "Colesterol (chol) por condición (boxplot)",
+        "age_vs_thalach_scatter": "Edad vs frecuencia cardiaca máxima (diagrama de dispersión)",
+        "trestbps_vs_chol_scatter": "Presión en reposo (trestbps) vs colesterol (diagrama de dispersión)",
+        "age_box": "Diagrama de caja: Edad",
+        "age_density": "Gráfico de densidad: Edad",
+        "age_hist": "Histograma: Edad",
+        "chol_box": "Diagrama de caja: Colesterol",
+        "chol_density": "Gráfico de densidad: Colesterol",
+        "chol_hist": "Histograma: Colesterol",
+        "thalach_box": "Diagrama de caja: Frecuencia cardiaca máxima",
+        "thalach_density": "Gráfico de densidad: Frecuencia cardiaca máxima",
+        "thalach_hist": "Histograma: Frecuencia cardiaca máxima",
+        "trestbps_box": "Diagrama de caja: Presión en reposo",
+        "trestbps_density": "Gráfico de densidad: Presión en reposo",
+        "trestbps_hist": "Histograma: Presión en reposo",
+        "oldpeak_box": "Diagrama de caja: Oldpeak",
+        "oldpeak_density": "Gráfico de densidad: Oldpeak",
+        "oldpeak_hist": "Histograma: Oldpeak",
+    }
 
-    # Portada / encabezado
-    elements.append(_wrap("Informe Ejecutivo – Resultados del Análisis", H1))
-    elements.append(_wrap(f"<b>Dataset:</b> {inputs.dataset_name}", P))
-    elements.append(_wrap(f"<b>Generado:</b> {now}", P))
-    elements.append(_sp(12))
+    # fallback: “stem” sin underscores, capitalizado
+    return mapping.get(stem, stem.replace("_", " ").strip().capitalize())
 
-    elements.append(_wrap("Resumen", H2))
+
+def _load_key_plots(inputs: ExecutiveReportInputs) -> List[Path]:
+    """
+    Selección de plots “clave” (para mantener el PDF corto).
+    Si alguno no existe, se omite sin romper.
+    """
+    base = inputs.plots_dir
+    candidates = [
+        base / "univariate" / "categorical" / "condition_bar.png",
+        base / "bivariate" / "cat_cat" / "cp_vs_condition_stacked_bar.png",
+        base / "bivariate" / "cat_cat" / "sex_vs_condition_stacked_bar.png",
+        base / "bivariate" / "num_cat" / "thalach_by_condition_box.png",
+        base / "bivariate" / "num_cat" / "chol_by_condition_box.png",
+        base / "bivariate" / "num_num" / "age_vs_thalach_scatter.png",
+        base / "bivariate" / "num_num" / "trestbps_vs_chol_scatter.png",
+    ]
+    return [p for p in candidates if p.exists()]
+
+
+def _img_flowable(path: Path, max_width: float, max_height: float) -> Image:
+    img = Image(str(path))
+    img._restrictSize(max_width, max_height)
+    img.hAlign = "CENTER"
+    return img
+
+
+# -----------------------------
+#  Builder principal
+# -----------------------------
+def build_executive_report_elements(
+    inputs: ExecutiveReportInputs,
+    alpha: float = 0.05,
+) -> Tuple[Path, List]:
+    """
+    Devuelve (output_pdf, elements) para que pdf_report.py construya el PDF.
+    """
+    title, h1, h2, body, small, caption = _styles()
+
+    # Márgenes (deben coincidir con pdf_report.py)
+    page_w, page_h = A4
+    left_margin = 40
+    right_margin = 40
+    top_margin = 40
+    bottom_margin = 40
+    usable_w = _available_width(page_w, left_margin, right_margin)
+
+    # Validaciones mínimas
+    _ = _safe_read_csv(inputs.univariate_numeric_csv)
+    _ = _safe_read_csv(inputs.chi_square_contingency_csv)
+    _ = _safe_read_csv(inputs.ttest_or_anova_summary_csv)
+    if not inputs.hypothesis_results_json.exists():
+        raise FileNotFoundError(f"No se encontró el archivo requerido: {inputs.hypothesis_results_json}")
+
+    elements: List = []
+
+    # -------------------------
+    # Portada / Resumen
+    # -------------------------
+    elements.append(Paragraph("Informe Ejecutivo – Resultados del Análisis", title))
+    elements.append(Spacer(1, 6))
+    elements.append(Paragraph(f"<b>Dataset:</b> {inputs.dataset_name}", body))
+    elements.append(Paragraph(f"<b>Generado:</b> {inputs.generated_at.strftime('%Y-%m-%d %H:%M')}", body))
+    elements.append(Spacer(1, 10))
+
+    elements.append(Paragraph("Resumen", h1))
     elements.append(
-        _wrap(
-            "Este documento resume los resultados principales del análisis exploratorio (EDA) y del "
-            "contraste de hipótesis. Incluye visualizaciones clave y métricas para una lectura rápida "
-            "orientada a toma de decisiones.",
-            P,
+        Paragraph(
+            "Este documento resume los resultados principales del análisis exploratorio (EDA) y del contraste de hipótesis. "
+            "Incluye visualizaciones clave y métricas para una lectura rápida orientada a toma de decisiones.",
+            body,
         )
     )
-    elements.append(_sp(6))
+    elements.append(Spacer(1, 6))
 
-    # ----------------------------
-    # Tabla univariante numérica (partida en 2 y headers acortados)
-    # ----------------------------
-    elements.append(_wrap("EDA univariante – resumen numérico", H2))
-    elements.append(_wrap("Extracto de medidas descriptivas principales.", P))
+    # -------------------------
+    # Tabla univariante (compacta en 2 partes)
+    # -------------------------
+    elements.append(Paragraph("EDA univariante – resumen numérico", h1))
+    elements.append(Paragraph("Extracto de medidas descriptivas principales.", body))
+    elements.append(Spacer(1, 6))
 
-    df_uni = _read_csv(inputs.univariate_numeric_csv)
-    df_uni = _shorten_headers(df_uni)
+    uni = _safe_read_csv(inputs.univariate_numeric_csv)
 
-    # Partimos tabla para que no explote el ancho
-    # Parte 1: columnas básicas
-    cols_1 = ["variable", "n", "missing", "mean", "median", "mode", "variance"]
-    cols_1 = [c for c in cols_1 if c in df_uni.columns]
-    part1 = df_uni[cols_1].copy()
+    # Parte 1: tendencia central
+    cols1 = ["variable", "n", "missing", "mean", "median", "mode", "variance"]
+    # Parte 2: dispersión/forma
+    cols2 = ["std", "iqr", "q1", "q3", "min", "max", "skewness", "outliers_iqr_count"]
 
-    # Parte 2: el resto
-    cols_2 = [c for c in df_uni.columns if c not in cols_1]
-    part2 = df_uni[cols_2].copy() if cols_2 else pd.DataFrame()
+    # Normaliza nombres por si cambian (p.ej. asimetría vs skewness)
+    renames = {
+        "asimetría": "skewness",
+        "outliers_iqr": "outliers_iqr_count",
+        "outliers_iqr_count": "outliers_iqr_count",
+    }
+    for old, new in renames.items():
+        if old in uni.columns and new not in uni.columns:
+            uni = uni.rename(columns={old: new})
 
-    page_w, _ = A4
-    usable_w = page_w - (40 + 40)
+    part1 = uni[[c for c in cols1 if c in uni.columns]].copy()
+    part2 = uni[[c for c in cols2 if c in uni.columns]].copy()
 
-    elements.append(_wrap("<i>Parte 1</i>", CAP))
-    elements.append(_df_to_table(part1, max_width=usable_w))
-    elements.append(_sp(12))
+    # Traducción header “skewness/outliers...”
+    part2 = part2.rename(columns={"skewness": "asimetría", "outliers_iqr_count": "outliers_iqr"})
 
-    if not part2.empty:
-        elements.append(_wrap("<i>Parte 2</i>", CAP))
-        elements.append(_df_to_table(part2, max_width=usable_w))
-        elements.append(_sp(8))
-
+    elements.append(Paragraph("<i>Parte 1</i>", small))
+    elements.append(_table_from_df(part1, max_width=usable_w, font_size=8, leading=9))
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph("<i>Parte 2</i>", small))
+    elements.append(_table_from_df(part2, max_width=usable_w, font_size=8, leading=9))
     elements.append(PageBreak())
 
-    # ----------------------------
-    # Gráficas clave: AGRUPADAS (baja páginas)
-    # ----------------------------
-    elements.append(_wrap("Gráficas clave (EDA)", H2))
+    # -------------------------
+    # Gráficas clave (2 por página)
+    # -------------------------
+    elements.append(Paragraph("Gráficas clave (EDA)", h1))
+    elements.append(Spacer(1, 6))
 
-    plots = inputs.plots_dir
+    key_plots = _load_key_plots(inputs)
+    if not key_plots:
+        elements.append(Paragraph("No se encontraron gráficas en output/plots/.", body))
+        elements.append(PageBreak())
+    else:
+        # 2 imágenes por página (vertical)
+        max_img_w = usable_w
+        # dejando espacio para captions; altura por imagen ~ (A4 usable / 2)
+        usable_h = page_h - top_margin - bottom_margin
+        max_img_h = (usable_h * 0.42)  # deja espacio para texto/caption
 
-    # Univariante numérico (2x2 por página aprox)
-    uni_num = [
-        plots / "univariate" / "numeric" / "age_box.png",
-        plots / "univariate" / "numeric" / "age_density.png",
-        plots / "univariate" / "numeric" / "chol_box.png",
-        plots / "univariate" / "numeric" / "chol_density.png",
-    ]
-    elements.append(_images_grid("Univariante (numéricas) – distribución y outliers", uni_num, ncols=2, cell_h=7.5 * cm))
+        first = True
+        for p1, p2 in _pairwise(key_plots):
+            if not first:
+                elements.append(PageBreak())
+            first = False
 
-    # Univariante categórico
-    uni_cat = [
-        plots / "univariate" / "categorical" / "condition_bar.png",
-        plots / "univariate" / "categorical" / "sex_bar.png",
-        plots / "univariate" / "categorical" / "cp_bar.png",
-        plots / "univariate" / "categorical" / "exang_bar.png",
-    ]
-    elements.append(_images_grid("Univariante (categóricas) – frecuencias", uni_cat, ncols=2, cell_h=7.0 * cm))
+            block: List = []
+            block.append(Paragraph(_plot_caption_es(p1), h2))
+            block.append(_img_flowable(p1, max_img_w, max_img_h))
+            block.append(Spacer(1, 6))
 
-    # Bivariante (cat-cat y num-cat)
-    bi_group1 = [
-        plots / "bivariate" / "cat_cat" / "cp_vs_condition_stacked_bar.png",
-        plots / "bivariate" / "cat_cat" / "sex_vs_condition_stacked_bar.png",
-        plots / "bivariate" / "num_cat" / "chol_by_condition_box.png",
-        plots / "bivariate" / "num_cat" / "thalach_by_condition_box.png",
-    ]
-    elements.append(_images_grid("Bivariante – asociaciones y comparaciones por condición", bi_group1, ncols=2, cell_h=7.0 * cm))
+            if p2 is not None:
+                block.append(Paragraph(_plot_caption_es(p2), h2))
+                block.append(_img_flowable(p2, max_img_w, max_img_h))
 
-    # Bivariante num-num (scatter)
-    bi_group2 = [
-        plots / "bivariate" / "num_num" / "age_vs_thalach_scatter.png",
-        plots / "bivariate" / "num_num" / "trestbps_vs_chol_scatter.png",
-    ]
-    elements.append(_images_grid("Bivariante (numéricas) – dispersión", bi_group2, ncols=2, cell_h=7.5 * cm))
+            elements.append(KeepTogether(block))
 
-    elements.append(PageBreak())
+        elements.append(PageBreak())
 
-    # ----------------------------
-    # Hipótesis (si existe md generado)
-    # ----------------------------
-    if inputs.hypothesis_md and _safe_exists(inputs.hypothesis_md):
-        elements.append(_wrap("Contraste de hipótesis (Punto 5)", H2))
-        elements.append(_wrap(f"Nivel de significación utilizado: α = {alpha:.2f}.", P))
+    # -------------------------
+    # Contraste de hipótesis (resumen corto)
+    # -------------------------
+    elements.append(Paragraph("Contraste de hipótesis (Punto 5)", h1))
+    elements.append(Paragraph(f"Nivel de significación utilizado: α = {alpha:.2f}.", body))
+    elements.append(Spacer(1, 8))
 
-        # MD simple: tratamos líneas como párrafos (sin “H□” ni símbolos raros)
-        text = inputs.hypothesis_md.read_text(encoding="utf-8", errors="ignore")
-        for raw in text.splitlines():
-            line = raw.strip()
-            if not line:
-                elements.append(_sp(6))
-                continue
+    # Cargamos resultados para mostrar estadísticos (evita “markdown tirado”)
+    results = json.loads(inputs.hypothesis_results_json.read_text(encoding="utf-8"))
 
-            # Limpia bullets markdown
-            line = line.replace("**", "")
-            if line.startswith("#"):
-                line = line.lstrip("#").strip()
-                elements.append(_wrap(line, H2))
-            else:
-                # reemplazo seguro de H0/H1 con subíndices usando HTML de ReportLab
-                line = (
-                    line.replace("H0", "H<sub>0</sub>")
-                        .replace("H1", "H<sub>1</sub>")
-                        .replace("H₀", "H<sub>0</sub>")
-                        .replace("H₁", "H<sub>1</sub>")
+    # Chi-cuadrado: tabla de contingencia (resumen)
+    elements.append(Paragraph("1) Prueba Chi-cuadrado (independencia)", h2))
+    elements.append(Paragraph("<b>Variables:</b> <code>cp</code> (categórica) vs <code>condition</code> (categórica)", body))
+    elements.append(
+        Paragraph(
+            "<b>Hipótesis</b><br/>"
+            "• H0: <code>cp</code> y <code>condition</code> son independientes.<br/>"
+            "• H1: existe asociación entre <code>cp</code> y <code>condition</code>.",
+            body,
+        )
+    )
+    chi = _safe_read_csv(inputs.chi_square_contingency_csv)
+    # Tabla compacta (si viene con columnas tipo sex,0,1 o similar)
+    elements.append(Paragraph("<b>Tabla de contingencia</b>", body))
+    elements.append(_table_from_df(chi, max_width=usable_w, font_size=8, leading=9))
+    chi_stats = (results.get("chi_square") or {})
+    if chi_stats:
+        chi2 = chi_stats.get("chi2")
+        p = chi_stats.get("p_value")
+        dof = chi_stats.get("dof")
+        decision = "Rechazar H0" if (isinstance(p, (int, float)) and p < alpha) else "No rechazar H0"
+        elements.append(Spacer(1, 6))
+        elements.append(Paragraph("<b>Resultados</b>", body))
+        elements.append(
+            Paragraph(
+                f"χ² = <b>{chi2:.4f}</b> &nbsp;&nbsp; gl = <b>{int(dof)}</b> &nbsp;&nbsp; p-valor = <b>{p:.6f}</b><br/>"
+                f"Decisión (α={alpha:.2f}): <b>{decision}</b>",
+                body,
+            )
+        )
+    elements.append(Spacer(1, 10))
+
+    # t-test / ANOVA resumen
+    elements.append(Paragraph("2) Comparación de medias (t-test / ANOVA)", h2))
+    comp = _safe_read_csv(inputs.ttest_or_anova_summary_csv)
+    elements.append(Paragraph("<b>Resumen por grupo</b>", body))
+    elements.append(_table_from_df(comp, max_width=usable_w, font_size=8, leading=9))
+    mean_stats = (results.get("mean_comparison") or {})
+    if mean_stats:
+        test = mean_stats.get("test")
+        stat = mean_stats.get("statistic")
+        p = mean_stats.get("p_value")
+        if test == "welch_ttest":
+            test_name = "t de Student (Welch)"
+            stat_name = "t"
+        elif test == "anova_one_way":
+            test_name = "ANOVA de un factor"
+            stat_name = "F"
+        else:
+            test_name = "No aplicable"
+            stat_name = "estadístico"
+
+        if isinstance(p, (int, float)):
+            decision = "Rechazar H0" if p < alpha else "No rechazar H0"
+        else:
+            decision = "No aplicable"
+
+        elements.append(Spacer(1, 6))
+        elements.append(Paragraph("<b>Resultados</b>", body))
+        if isinstance(stat, (int, float)) and isinstance(p, (int, float)):
+            elements.append(
+                Paragraph(
+                    f"Prueba aplicada: <b>{test_name}</b><br/>"
+                    f"{stat_name} = <b>{stat:.4f}</b> &nbsp;&nbsp; p-valor = <b>{p:.6f}</b><br/>"
+                    f"Decisión (α={alpha:.2f}): <b>{decision}</b>",
+                    body,
                 )
-                elements.append(_wrap(line, P))
+            )
+        else:
+            elements.append(Paragraph("No se pudieron calcular estadísticos para esta comparación.", body))
+    elements.append(Spacer(1, 8))
 
-    # Cierre
-    elements.append(_sp(10))
-    elements.append(_wrap("Fin del informe.", CAP))
+    elements.append(
+        Paragraph(
+            "<b>Trazabilidad (archivos de salida)</b><br/>"
+            "Las salidas completas (tablas y detalles del EDA) se encuentran en <code>output/reports/</code>, "
+            "y las gráficas en <code>output/plots/</code>.",
+            body,
+        )
+    )
 
-    return out_pdf, elements
+    return inputs.output_pdf, elements
+
+
+# -----------------------------
+#  Factory (opcional) para construir inputs por defecto
+# -----------------------------
+def default_executive_report_inputs() -> ExecutiveReportInputs:
+    """
+    Si querés simplificar main/pdf_report: genera inputs con rutas estándar.
+    """
+    reports_dir = OUTPUT_DIR / "reports"
+    plots_dir = OUTPUT_DIR / "plots"
+    return ExecutiveReportInputs(
+        dataset_name="Heart Disease (Cleveland, UCI)",
+        generated_at=datetime.now(),
+        univariate_numeric_csv=reports_dir / "univariate_numeric_summary.csv",
+        chi_square_contingency_csv=reports_dir / "chi_square_cp_vs_condition_contingency.csv",
+        ttest_or_anova_summary_csv=reports_dir / "ttest_chol_by_condition_summary.csv",
+        hypothesis_results_json=reports_dir / "hypothesis_results.json",
+        plots_dir=plots_dir,
+        output_pdf=reports_dir / "INFORME_EJECUTIVO_ACT0504.pdf",
+    )
