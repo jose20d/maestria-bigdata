@@ -1,9 +1,6 @@
 pandas
 numpy
 matplotlib
-seaborn
 scipy
-requests
 kagglehub
 reportlab
-tabulate
