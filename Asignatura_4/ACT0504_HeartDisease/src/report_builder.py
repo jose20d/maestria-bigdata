@@ -196,53 +196,116 @@ def _plot_caption_es(plot_path: Path) -> str:
     Convierte nombres de archivo a captions en español (sin mezclar idiomas).
     Ajustá este mapeo si cambian nombres.
     """
-    stem = plot_path.stem
+    stem = plot_path.stem.lower()
 
-    mapping = {
-        "condition_bar": "Distribución de la condición (0=No, 1=Sí)",
-        "cp_vs_condition_stacked_bar": "Dolor torácico (cp) vs condición (barras apiladas %)",
-        "sex_vs_condition_stacked_bar": "Sexo vs condición (barras apiladas %)",
-        "thalach_by_condition_box": "Frecuencia cardiaca máxima (thalach) por condición (boxplot)",
-        "chol_by_condition_box": "Colesterol (chol) por condición (boxplot)",
-        "age_vs_thalach_scatter": "Edad vs frecuencia cardiaca máxima (diagrama de dispersión)",
-        "trestbps_vs_chol_scatter": "Presión en reposo (trestbps) vs colesterol (diagrama de dispersión)",
-        "age_box": "Diagrama de caja: Edad",
-        "age_density": "Gráfico de densidad: Edad",
-        "age_hist": "Histograma: Edad",
-        "chol_box": "Diagrama de caja: Colesterol",
-        "chol_density": "Gráfico de densidad: Colesterol",
-        "chol_hist": "Histograma: Colesterol",
-        "thalach_box": "Diagrama de caja: Frecuencia cardiaca máxima",
-        "thalach_density": "Gráfico de densidad: Frecuencia cardiaca máxima",
-        "thalach_hist": "Histograma: Frecuencia cardiaca máxima",
-        "trestbps_box": "Diagrama de caja: Presión en reposo",
-        "trestbps_density": "Gráfico de densidad: Presión en reposo",
-        "trestbps_hist": "Histograma: Presión en reposo",
-        "oldpeak_box": "Diagrama de caja: Oldpeak",
-        "oldpeak_density": "Gráfico de densidad: Oldpeak",
-        "oldpeak_hist": "Histograma: Oldpeak",
+    var_labels = {
+        "age": "Edad",
+        "trestbps": "Presión arterial en reposo",
+        "chol": "Colesterol total",
+        "thalach": "Frecuencia cardiaca máxima",
+        "oldpeak": "Oldpeak",
+        "sex": "Sexo",
+        "cp": "Tipo de dolor torácico",
+        "fbs": "Glucosa en ayunas > 120 mg/dL",
+        "restecg": "ECG en reposo",
+        "exang": "Angina inducida por ejercicio",
+        "slope": "Pendiente del ST",
+        "ca": "Vasos principales (0–4)",
+        "thal": "Prueba de talio (thal)",
+        "condition": "Condición (0=No, 1=Sí)",
+        "target": "Objetivo (target)",
     }
 
-    # fallback: “stem” sin underscores, capitalizado
-    return mapping.get(stem, stem.replace("_", " ").strip().capitalize())
+    # Casos bivariantes con nombre explícito
+    explicit = {
+        "cp_vs_condition_stacked_bar": "Dolor torácico (cp) vs condición (barras apiladas %)",
+        "sex_vs_condition_stacked_bar": "Sexo vs condición (barras apiladas %)",
+        "chol_by_condition_box": "Colesterol (chol) por condición (boxplot)",
+        "thalach_by_condition_box": "Frecuencia cardiaca máxima (thalach) por condición (boxplot)",
+        "age_vs_thalach_scatter": "Edad vs frecuencia cardiaca máxima (diagrama de dispersión)",
+        "trestbps_vs_chol_scatter": "Presión en reposo (trestbps) vs colesterol (diagrama de dispersión)",
+    }
+    if stem in explicit:
+        return explicit[stem]
+
+    # Patrones univariantes: {var}_{tipo}
+    parts = stem.split("_")
+    if len(parts) >= 2:
+        var = parts[0]
+        kind = parts[-1]
+        label = var_labels.get(var, var)
+
+        if kind == "hist":
+            return f"Histograma: {label}"
+        if kind == "box":
+            return f"Diagrama de caja: {label}"
+        if kind == "density":
+            return f"Gráfico de densidad: {label}"
+        if kind == "bar":
+            if var == "condition":
+                return "Distribución de la condición (0=No, 1=Sí)"
+            return f"Gráfico de barras: {label}"
+
+    return stem.replace("_", " ").strip().capitalize()
 
 
-def _load_key_plots(inputs: ExecutiveReportInputs) -> List[Path]:
+def _load_curated_plots(inputs: ExecutiveReportInputs) -> List[Tuple[str, List[Path]]]:
     """
-    Selección de plots “clave” (para mantener el PDF corto).
-    Si alguno no existe, se omite sin romper.
+    Selección “curada” de gráficas para el PDF:
+    - Incluye un set amplio (univariante + bivariante)
+    - Mantiene un orden estable
+    - Omite faltantes sin romper
     """
     base = inputs.plots_dir
-    candidates = [
-        base / "univariate" / "categorical" / "condition_bar.png",
-        base / "bivariate" / "cat_cat" / "cp_vs_condition_stacked_bar.png",
+
+    numeric_vars = ["age", "trestbps", "chol", "thalach", "oldpeak"]
+    categorical_vars = ["condition", "sex", "cp", "fbs", "restecg", "exang", "slope", "ca", "thal"]
+
+    uni_num: List[Path] = []
+    for v in numeric_vars:
+        # Reducimos un poco: histograma + boxplot (omitimos densidad para acortar el PDF)
+        for kind in ["hist", "box"]:
+            uni_num.append(base / "univariate" / "numeric" / f"{v}_{kind}.png")
+
+    uni_cat: List[Path] = []
+    for v in categorical_vars:
+        uni_cat.append(base / "univariate" / "categorical" / f"{v}_bar.png")
+
+    bi_cat_cat: List[Path] = [
         base / "bivariate" / "cat_cat" / "sex_vs_condition_stacked_bar.png",
-        base / "bivariate" / "num_cat" / "thalach_by_condition_box.png",
+        base / "bivariate" / "cat_cat" / "cp_vs_condition_stacked_bar.png",
+    ]
+    bi_num_cat: List[Path] = [
         base / "bivariate" / "num_cat" / "chol_by_condition_box.png",
+        base / "bivariate" / "num_cat" / "thalach_by_condition_box.png",
+    ]
+    bi_num_num: List[Path] = [
         base / "bivariate" / "num_num" / "age_vs_thalach_scatter.png",
         base / "bivariate" / "num_num" / "trestbps_vs_chol_scatter.png",
     ]
-    return [p for p in candidates if p.exists()]
+
+    def existing(paths: List[Path]) -> List[Path]:
+        seen: set[str] = set()
+        out: List[Path] = []
+        for p in paths:
+            if not p.exists():
+                continue
+            key = str(p.resolve())
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(p)
+        return out
+
+    sections: List[Tuple[str, List[Path]]] = [
+        ("Univariante (numéricas) – distribución y outliers", existing(uni_num)),
+        ("Univariante (categóricas) – frecuencias", existing(uni_cat)),
+        ("Bivariante (categóricas) – asociaciones", existing(bi_cat_cat)),
+        ("Bivariante (numérica vs condición) – comparación por grupos", existing(bi_num_cat)),
+        ("Bivariante (numéricas) – dispersión", existing(bi_num_num)),
+    ]
+
+    return [(title, plots) for title, plots in sections if plots]
 
 
 def _img_flowable(path: Path, max_width: float, max_height: float) -> Image:
@@ -338,38 +401,45 @@ def build_executive_report_elements(
     elements.append(PageBreak())
 
     # -------------------------
-    # Gráficas clave (2 por página)
+    # Gráficas (curadas) – 2 por página (sin páginas “vacías” de solo títulos)
     # -------------------------
-    elements.append(Paragraph("Gráficas clave (EDA)", h1))
-    elements.append(Spacer(1, 6))
-
-    key_plots = _load_key_plots(inputs)
-    if not key_plots:
+    sections = _load_curated_plots(inputs)
+    if not sections:
         elements.append(Paragraph("No se encontraron gráficas en output/plots/.", body))
         elements.append(PageBreak())
     else:
         # 2 imágenes por página (vertical)
         max_img_w = usable_w
-        # dejando espacio para captions; altura por imagen ~ (A4 usable / 2)
         usable_h = page_h - top_margin - bottom_margin
-        max_img_h = (usable_h * 0.42)  # deja espacio para texto/caption
+        # Dejamos un poco más de margen para que el bloque completo (títulos + 2 imágenes)
+        # siempre quepa y no deje títulos “colgados” en una página.
+        max_img_h = (usable_h * 0.38)
 
-        first = True
-        for p1, p2 in _pairwise(key_plots):
-            if not first:
-                elements.append(PageBreak())
-            first = False
+        first_page_overall = True
+        for section_idx, (section_title, plots) in enumerate(sections):
+            for page_idx, (p1, p2) in enumerate(_pairwise(plots)):
+                if not first_page_overall:
+                    elements.append(PageBreak())
+                first_page_overall = False
 
-            block: List = []
-            block.append(Paragraph(_plot_caption_es(p1), h2))
-            block.append(_img_flowable(p1, max_img_w, max_img_h))
-            block.append(Spacer(1, 6))
+                # Importante: ponemos encabezados dentro del bloque para evitar páginas con solo títulos
+                block: List = []
+                if section_idx == 0 and page_idx == 0:
+                    block.append(Paragraph("Gráficas (EDA)", h1))
+                    block.append(Spacer(1, 6))
 
-            if p2 is not None:
-                block.append(Paragraph(_plot_caption_es(p2), h2))
-                block.append(_img_flowable(p2, max_img_w, max_img_h))
+                block.append(Paragraph(section_title, h1))
+                block.append(Spacer(1, 6))
 
-            elements.append(KeepTogether(block))
+                block.append(Paragraph(_plot_caption_es(p1), h2))
+                block.append(_img_flowable(p1, max_img_w, max_img_h))
+
+                if p2 is not None:
+                    block.append(Spacer(1, 6))
+                    block.append(Paragraph(_plot_caption_es(p2), h2))
+                    block.append(_img_flowable(p2, max_img_w, max_img_h))
+
+                elements.append(KeepTogether(block))
 
         elements.append(PageBreak())
 
