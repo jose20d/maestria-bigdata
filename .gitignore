@@ -8,4 +8,6 @@ __pycache__/
 *.DS_Store
 
 data/
+!Asignatura_7/ACT0700_ModeladoPredictivo/data/
+!Asignatura_7/ACT0700_ModeladoPredictivo/data/**
 output/

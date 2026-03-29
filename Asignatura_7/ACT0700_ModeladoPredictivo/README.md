@@ -1,12 +1,12 @@
 # Proyecto de Modelado Predictivo (Asignatura 7)
 
-## Autores:
+Autores:
+- Jose Daniel Alfaro Alfaro
+- Daniela Corona Miguel
+- Feeby Mendez Villalobos
+- Marco Ramirez Gomez
 
-Jose Daniel Alfaro Alfaro  
-Daniela Corona Miguel  
-Feeby Mendez Villalobos  
-Marco Ramirez Gomez
-Programa: Máster en Big Data & Business Intelligence – NEXT Educación
+Programa: Máster en Big Data & Business Intelligence - NEXT Educacion
 Asignatura: Trabajo Practico - Asignatura 7. Modelado Predictivo con Machine Learning
 
 ## Objetivo
@@ -90,7 +90,7 @@ Archivos esperados en `data/raw`:
 - `CPI2023_Global_Results__Trends.xlsx`
 - `worldbank_gdp.xlsx`
 - `fsi.xlsx`
-- `wdi.csv`
+- `wdi.csv.gz` (recomendado) o `wdi.csv`
 
 ## Preparacion de datos (`data/raw`)
 
@@ -101,6 +101,8 @@ bash preparar_linux.sh
 ```
 
 En Windows, puede copiarse manualmente el mismo conjunto de archivos a `data/raw`.
+
+Nota: si `wdi.csv` no existe y esta disponible `wdi.csv.gz` (o `wdi.csv.zip`) en `data/raw`, el codigo lo descomprime automaticamente antes de procesar.
 
 ## Ejecucion recomendada: Notebook (Linux/Windows)
 
