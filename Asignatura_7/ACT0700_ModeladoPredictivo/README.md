@@ -15,6 +15,32 @@ Este repositorio contiene scripts de preprocesamiento, analisis exploratorio, mo
 
 El codigo se mantiene con su estructura actual, sin cambios de logica en funciones o modelos.
 
+## Ejecucion minima para el profesor (Jupyter)
+
+Si el objetivo es solo abrir Jupyter y correr el notebook principal:
+
+Nota importante: para la revision academica, esta es la ruta recomendada. Los scripts `.sh` son opcionales y aplican solo para Linux.
+
+### Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python -m jupyter lab
+```
+
+### Windows (PowerShell)
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python -m jupyter lab
+```
+
+Luego abrir y ejecutar en orden: `Trabajo_Asignatura7.ipynb`.
+
 ## Requisitos
 
 - Linux o Windows
@@ -100,6 +126,8 @@ Para copiar automaticamente los archivos desde la raiz del proyecto a `data/raw`
 bash preparar_linux.sh
 ```
 
+Este script es opcional y solo para Linux.
+
 En Windows, puede copiarse manualmente el mismo conjunto de archivos a `data/raw`.
 
 Nota: si `wdi.csv` no existe y esta disponible `wdi.csv.gz` (o `wdi.csv.zip`) en `data/raw`, el codigo lo descomprime automaticamente antes de procesar.
@@ -139,6 +167,7 @@ bash ejecutar_pipeline_linux.sh
 ```
 
 Nota: `ejecutar_pipeline_linux.sh` usa automaticamente `.venv/bin/python` si existe.
+Este script es opcional y solo para Linux.
 
 ## Ejecucion paso a paso (Linux/Windows)
 
