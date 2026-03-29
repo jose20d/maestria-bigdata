@@ -15,13 +15,19 @@ for f in \
   "wgidataset-2025.xlsx" \
   "CPI2023_Global_Results__Trends.xlsx" \
   "worldbank_gdp.xlsx" \
-  "fsi.xlsx" \
-  "wdi.csv"
+  "fsi.xlsx"
 do
   if [[ -f "${BASE_DIR}/${f}" && ! -f "${RAW_DIR}/${f}" ]]; then
     cp --update=none "${BASE_DIR}/${f}" "${RAW_DIR}/${f}"
   fi
 done
+
+# WDI puede venir sin comprimir o comprimido.
+if [[ -f "${BASE_DIR}/wdi.csv" && ! -f "${RAW_DIR}/wdi.csv" ]]; then
+  cp --update=none "${BASE_DIR}/wdi.csv" "${RAW_DIR}/wdi.csv"
+elif [[ -f "${BASE_DIR}/wdi.csv.gz" && ! -f "${RAW_DIR}/wdi.csv.gz" ]]; then
+  cp --update=none "${BASE_DIR}/wdi.csv.gz" "${RAW_DIR}/wdi.csv.gz"
+fi
 
 echo "Entorno Linux preparado."
 echo "Datos raw: ${RAW_DIR}"
