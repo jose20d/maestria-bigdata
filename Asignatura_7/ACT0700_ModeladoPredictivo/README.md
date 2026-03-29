@@ -1,5 +1,14 @@
 # Proyecto de Modelado Predictivo (Asignatura 7)
 
+Autores:
+- Jose Daniel Alfaro Alfaro
+- Daniela Corona Miguel
+- Feeby Mendez Villalobos
+- Marco Ramirez Gomez
+
+Programa: Máster en Big Data & Business Intelligence - NEXT Educacion
+Asignatura: Trabajo Practico - Asignatura 7. Modelado Predictivo con Machine Learning
+
 ## Objetivo
 
 Este repositorio contiene scripts de preprocesamiento, analisis exploratorio, modelado supervisado y analisis no supervisado para el trabajo de Machine Learning del master.
