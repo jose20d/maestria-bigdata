@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Datos de entrada (se versionan)
+!data/raw/
+!data/raw/**
+
+# Salidas del pipeline (no se versionan)
+data/processed/*
+!data/processed/.gitkeep
